@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Excel Tracker with Filters</title>
+</head>
+<body>
+    <h1>Dynamic Excel Tracker</h1>
+
+    <h2>Sheets</h2>
+    <select id="sheetSelector" onchange="loadFilters()"></select>
+    <button onclick="loadSheet()">Load Data</button>
+
+    <h2>Data</h2>
+    <table border="1" id="dataTable">
+        <thead id="tableHeader">
+            <tr id="headerRow">
+                <!-- Dropdowns will be dynamically inserted here -->
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <script>
+        async function loadSheets() {
+            const response = await fetch('/sheets');
+            const sheets = await response.json();
+            const selector = document.getElementById('sheetSelector');
+            selector.innerHTML = ''; // Clear existing options
+            sheets.forEach(sheet => {
+                const option = document.createElement('option');
+                option.value = sheet;
+                option.textContent = sheet;
+                selector.appendChild(option);
+            });
+        }
+
+        async function loadFilters() {
+            const sheetName = document.getElementById('sheetSelector').value;
+            const response = await fetch(`/filters/${sheetName}`);
+            const filters = await response.json();
+
+            const headerRow = document.getElementById('headerRow');
+            headerRow.innerHTML = ''; // Clear existing header filters
+
+            for (const column in filters) {
+                const th = document.createElement('th');
+
+                // Create a dropdown for each column header
+                const select = document.createElement('select');
+                select.id = `filter-${column}`;
+                select.innerHTML = `<option value="">-- All --</option>`;
+                filters[column].forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+
+                // Append dropdown to the header
+                th.appendChild(select);
+                headerRow.appendChild(th);
+            }
+        }
+
+        async function loadSheet() {
+            const sheetName = document.getElementById('sheetSelector').value;
+
+            // Get filter values
+            const filters = {};
+            const filterElements = document.querySelectorAll('[id^="filter-"]');
+            filterElements.forEach(filter => {
+                if (filter.value) {
+                    const column = filter.id.replace('filter-', '');
+                    filters[column] = filter.value;
+                }
+            });
+
+            const queryString = new URLSearchParams(filters).toString();
+            const response = await fetch(`/data/${sheetName}?${queryString}`);
+            const data = await response.json();
+
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            // Create table header
+            const headerRow = document.createElement('tr');
+            for (const col in data) {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            }
+            tableHeader.appendChild(headerRow);
+
+            // Create table rows
+            const numRows = Object.values(data)[0]?.length || 0;
+            for (let i = 0; i < numRows; i++) {
+                const tr = document.createElement('tr');
+                for (const col in data) {
+                    const td = document.createElement('td');
+                    td.textContent = data[col][i] || '';
+                    tr.appendChild(td);
+                }
+                tableBody.appendChild(tr);
+            }
+        }
+
+        // Load sheets on page load
+        loadSheets();
+    </script>
+</body>
+</html>
