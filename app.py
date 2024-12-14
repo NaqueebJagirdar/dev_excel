@@ -10,6 +10,27 @@ import os
 
 app = Flask(__name__)
 
+@app.route('/')
+def homepage():
+    """
+    Serve the homepage with options for Admin and User.
+    """
+    return render_template('homepage.html')
+
+@app.route('/admin')
+def admin():
+    """
+    Redirect to the job tracker page for Admin.
+    """
+    return render_template('index.html')  # Existing job tracker
+
+@app.route('/user')
+def user():
+    """
+    Redirect to a placeholder page for the User.
+    """
+    return render_template('user.html')  # Blank page for now
+
 # Database setup
 engine = create_engine('sqlite:///database.db')
 Session = sessionmaker(bind=engine)
