@@ -4,111 +4,279 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Excel Tracker with Filters</title>
-</head>
-<body>
-    <h1>Dynamic Excel Tracker</h1>
-
-    <h2>Sheets</h2>
-    <select id="sheetSelector" onchange="loadFilters()"></select>
-    <button onclick="loadSheet()">Load Data</button>
-
-    <h2>Data</h2>
-    <table border="1" id="dataTable">
-        <thead id="tableHeader">
-            <tr id="headerRow">
-                <!-- Dropdowns will be dynamically inserted here -->
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
-
-    <script>
-        async function loadSheets() {
-            const response = await fetch('/sheets');
-            const sheets = await response.json();
-            const selector = document.getElementById('sheetSelector');
-            selector.innerHTML = ''; // Clear existing options
-            sheets.forEach(sheet => {
-                const option = document.createElement('option');
-                option.value = sheet;
-                option.textContent = sheet;
-                selector.appendChild(option);
-            });
+    <style>
+        /* General body styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
         }
 
-        async function loadFilters() {
-            const sheetName = document.getElementById('sheetSelector').value;
-            const response = await fetch(`/filters/${sheetName}`);
-            const filters = await response.json();
+        /* Page headings styling */
+        h1, h2 {
+            text-align: left;
+            color: #4CAF50;
+            margin-left: 10px;
+        }
 
-            const headerRow = document.getElementById('headerRow');
-            headerRow.innerHTML = ''; // Clear existing header filters
+        /* Main container for the content */
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px 0; /* Removed auto centering */
+            margin-left: 10px; /* Align container to the left */
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
 
-            for (const column in filters) {
-                const th = document.createElement('th');
+        /* Dropdown and button styling */
+        select, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
 
-                // Create a dropdown for each column header
-                const select = document.createElement('select');
-                select.id = `filter-${column}`;
-                select.innerHTML = `<option value="">-- All --</option>`;
-                filters[column].forEach(value => {
+        /* Button hover effect */
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-left: 0; /* Align table with the container */
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        /* Header row styling */
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* Filter dropdown styling */
+        .filter-dropdown {
+            width: 100%;
+            padding: 5px;
+        }
+
+        /* Styling for column headers above dropdown filters */
+        .header-title {
+            font-weight: bold;
+            color: #333;
+            text-align: left;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic Excel Tracker</h1>
+
+        <!-- Section for selecting sheets -->
+        <h2>Sheets</h2>
+        <div>
+            <select id="sheetSelector" onchange="loadFilters()"></select>
+            <button onclick="loadSheet()">Load Data</button>
+        </div>
+
+        <!-- Section for displaying data -->
+        <h2>Data</h2>
+        <table id="dataTable">
+            <thead id="tableHeader">
+                <tr id="headerTitles">
+                    <!-- Column titles will be dynamically inserted here -->
+                </tr>
+                <tr id="headerRow">
+                    <!-- Filter dropdowns will be dynamically inserted here -->
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Table rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let originalData = {}; // Global variable to store the full data set for re-filtering
+
+        /**
+         * Fetches and populates the list of available sheets.
+         */
+        async function loadSheets() {
+            try {
+                const response = await fetch('/sheets');
+                const sheets = await response.json();
+                const selector = document.getElementById('sheetSelector');
+                selector.innerHTML = ''; // Clear existing options
+
+                sheets.forEach(sheet => {
                     const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    select.appendChild(option);
+                    option.value = sheet;
+                    option.textContent = sheet;
+                    selector.appendChild(option);
                 });
-
-                // Append dropdown to the header
-                th.appendChild(select);
-                headerRow.appendChild(th);
+            } catch (error) {
+                console.error('Error loading sheets:', error);
             }
         }
 
+        /**
+         * Fetches and renders column-specific filters for the selected sheet.
+         */
+        async function loadFilters() {
+            const sheetName = document.getElementById('sheetSelector').value;
+
+            try {
+                const response = await fetch(`/filters/${sheetName}`);
+                const filters = await response.json();
+
+                const headerRow = document.getElementById('headerRow');
+                const headerTitles = document.getElementById('headerTitles');
+                headerRow.innerHTML = ''; // Clear existing filters
+                headerTitles.innerHTML = ''; // Clear existing titles
+
+                for (const column in filters) {
+                    const thTitle = document.createElement('th');
+                    const thFilter = document.createElement('th');
+
+                    // Add column title
+                    thTitle.textContent = column;
+                    thTitle.classList.add('header-title');
+                    headerTitles.appendChild(thTitle);
+
+                    // Create a dropdown filter for each column
+                    const select = document.createElement('select');
+                    select.id = `filter-${column}`;
+                    select.classList.add('filter-dropdown');
+                    select.innerHTML = `<option value="">-- All --</option>`;
+
+                    filters[column].forEach(value => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = value;
+                        select.appendChild(option);
+                    });
+
+                    // Add event listener to apply filters dynamically
+                    select.addEventListener('change', applyFilters);
+
+                    // Append dropdown filter to the header
+                    thFilter.appendChild(select);
+                    headerRow.appendChild(thFilter);
+                }
+            } catch (error) {
+                console.error('Error loading filters:', error);
+            }
+        }
+
+        /**
+         * Fetches and renders the entire dataset for the selected sheet.
+         */
         async function loadSheet() {
             const sheetName = document.getElementById('sheetSelector').value;
 
-            // Get filter values
-            const filters = {};
+            try {
+                const response = await fetch(`/data/${sheetName}`);
+                const data = await response.json();
+
+                // Store the full dataset for future filtering
+                originalData = data;
+
+                // Render the table with the full dataset
+                renderTable(data);
+            } catch (error) {
+                console.error('Error loading sheet data:', error);
+            }
+        }
+
+        /**
+         * Applies active filters to the dataset and updates the table.
+         */
+        function applyFilters() {
+            // Clone the original data
+            let filteredData = JSON.parse(JSON.stringify(originalData));
+
+            // Iterate over active filters
             const filterElements = document.querySelectorAll('[id^="filter-"]');
             filterElements.forEach(filter => {
-                if (filter.value) {
-                    const column = filter.id.replace('filter-', '');
-                    filters[column] = filter.value;
+                const column = filter.id.replace('filter-', '');
+                const filterValue = filter.value;
+
+                // Filter rows based on the active filter for each column
+                if (filterValue) {
+                    for (const key in filteredData) {
+                        filteredData[key] = filteredData[key].filter(
+                            (item, index) =>
+                                originalData[column][index] === filterValue
+                        );
+                    }
                 }
             });
 
-            const queryString = new URLSearchParams(filters).toString();
-            const response = await fetch(`/data/${sheetName}?${queryString}`);
-            const data = await response.json();
+            // Update the table with the filtered data
+            renderTable(filteredData);
+        }
 
+        /**
+         * Renders the data table with the given dataset.
+         * @param {Object} data - The dataset to render.
+         */
+        function renderTable(data) {
             const tableHeader = document.getElementById('tableHeader');
             const tableBody = document.getElementById('tableBody');
-            tableHeader.innerHTML = '';
-            tableBody.innerHTML = '';
+            tableBody.innerHTML = ''; // Clear the table body
 
-            // Create table header
-            const headerRow = document.createElement('tr');
-            for (const col in data) {
-                const th = document.createElement('th');
-                th.textContent = col;
-                headerRow.appendChild(th);
+            // Check if there is data to display
+            if (!data || Object.keys(data).length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
+                return;
             }
-            tableHeader.appendChild(headerRow);
 
-            // Create table rows
+            // Create the table header (only once)
+            if (!document.getElementById('headerTitles').hasChildNodes()) {
+                const headerRow = document.createElement('tr');
+                Object.keys(data).forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                tableHeader.appendChild(headerRow);
+            }
+
+            // Render rows dynamically
             const numRows = Object.values(data)[0]?.length || 0;
             for (let i = 0; i < numRows; i++) {
                 const tr = document.createElement('tr');
-                for (const col in data) {
+                Object.keys(data).forEach(col => {
                     const td = document.createElement('td');
-                    td.textContent = data[col][i] || '';
+                    td.textContent = data[col][i] || ''; // Handle empty cells
                     tr.appendChild(td);
-                }
+                });
                 tableBody.appendChild(tr);
             }
         }
 
-        // Load sheets on page load
+        // Initialize by loading sheets
         loadSheets();
     </script>
 </body>
