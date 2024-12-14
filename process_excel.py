@@ -1,11 +1,16 @@
+"""
+Utility module to process Excel files and store their data in a database.
+
+This script reads Excel files, processes the data row by row, and
+stores the data in a database using SQLAlchemy ORM models.
+"""
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from datetime import datetime
 from models import SheetData
 
 # Database connection
-engine = create_engine('sqlite:///database.db')
+engine = create_engine("sqlite:///database.db")
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -13,6 +18,7 @@ session = Session()
 def process_excel(file_path):
     """
     Process all sheets in the Excel file and dynamically update the database.
+
     Converts Pandas Timestamp to Python datetime objects for date_value column.
 
     Args:
@@ -43,7 +49,8 @@ def process_excel(file_path):
                 if isinstance(cell_value, pd.Timestamp):
                     date_value = cell_value.to_pydatetime()  # pure Python datetime
                 else:
-                    # Store non-dates (and also Timestamps that are not recognized) as text
+                    # Store non-dates (and also Timestamps
+                    # that are not recognized) as text
                     if not pd.isna(cell_value):
                         value = str(cell_value)  # convert to string
 
@@ -51,7 +58,7 @@ def process_excel(file_path):
                     sheet_name=sheet_name,
                     column_name=col,
                     value=value,
-                    date_value=date_value
+                    date_value=date_value,
                 )
                 session.add(sheet_data)
 
