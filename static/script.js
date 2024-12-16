@@ -1,187 +1,250 @@
-<script>
-    let originalData = { }; // Global variable to store the full data set for re-filtering
+let originalData = {}; // Store the full dataset for the current sheet
+let activeFilters = {}; // Track active filters
+let searchQuery = ''; // Store the search query
 
-    /**
-     * Fetches and populates the list of available sheets.
-     */
-    async function loadSheets() {
-            try {
-                const response = await fetch('/sheets');
-    const sheets = await response.json();
-    const selector = document.getElementById('sheetSelector');
-    selector.innerHTML = ''; // Clear existing options
+/**
+ * Fetches and populates the list of sheets, loads the first sheet's data, and initializes filters.
+ */
+async function loadSheets() {
+    try {
+        const response = await fetch('/sheets');
+        const sheets = await response.json();
+        const selector = document.getElementById('sheetSelector');
 
-                sheets.forEach(sheet => {
-                    const option = document.createElement('option');
-    option.value = sheet;
-    option.textContent = sheet;
-    selector.appendChild(option);
-                });
-            } catch (error) {
+        selector.innerHTML = ''; // Clear existing sheet options
+        sheets.forEach((sheet, index) => {
+            const option = document.createElement('option');
+            option.value = sheet;
+            option.textContent = sheet;
+            selector.appendChild(option);
+
+            if (index === 0) selector.value = sheet; // Auto-select the first sheet
+        });
+
+        // Load first sheet and filters
+        await loadSheet();
+        await loadFilters();
+
+        // Add event listener to reload data and filters on sheet change
+        selector.addEventListener('change', async () => {
+            activeFilters = {}; // Reset filters
+            searchQuery = ''; // Reset search
+            document.getElementById('searchInput').value = '';
+            await loadSheet();
+            await loadFilters();
+        });
+
+        // Initialize search input event listener
+        initializeSearch();
+    } catch (error) {
         console.error('Error loading sheets:', error);
-            }
-        }
+    }
+}
 
-    /**
-     * Fetches and renders column-specific filters for the selected sheet.
-     */
-    async function loadFilters() {
-            const sheetName = document.getElementById('sheetSelector').value;
-
+/**
+ * Fetches and loads the entire dataset for the selected sheet.
+ */
+async function loadSheet() {
+    const sheetName = document.getElementById('sheetSelector').value;
     try {
-                const response = await fetch(`/filters/${sheetName}`);
-    const filters = await response.json();
-
-    const headerRow = document.getElementById('headerRow');
-    const headerTitles = document.getElementById('headerTitles');
-    headerRow.innerHTML = ''; // Clear existing filters
-    headerTitles.innerHTML = ''; // Clear existing titles
-
-    for (const column in filters) {
-                    const thTitle = document.createElement('th');
-    const thFilter = document.createElement('th');
-
-    // Add column title
-    thTitle.textContent = column;
-    thTitle.classList.add('header-title');
-    headerTitles.appendChild(thTitle);
-
-    // Create a dropdown filter for each column
-    const select = document.createElement('select');
-    select.id = `filter-${column}`;
-    select.classList.add('filter-dropdown');
-    select.innerHTML = `<option value="">-- All --</option>`;
-
-                    filters[column].forEach(value => {
-                        const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    select.appendChild(option);
-                    });
-
-    // Add event listener to apply filters dynamically
-    select.addEventListener('change', applyFilters);
-
-    // Append dropdown filter to the header
-    thFilter.appendChild(select);
-    headerRow.appendChild(thFilter);
-                }
-            } catch (error) {
-        console.error('Error loading filters:', error);
-            }
-        }
-
-    /**
-     * Fetches and renders the entire dataset for the selected sheet.
-     */
-    async function loadSheet() {
-            const sheetName = document.getElementById('sheetSelector').value;
-
-    try {
-                const response = await fetch(`/data/${sheetName}`);
-    const data = await response.json();
-
-    // Store the full dataset for future filtering
-    originalData = data;
-
-    // Render the table with the full dataset
-    renderTable(data);
-            } catch (error) {
+        const response = await fetch(`/data/${sheetName}`);
+        originalData = await response.json(); // Reset dataset
+        activeFilters = {}; // Reset active filters
+        searchQuery = ''; // Reset search query
+        document.getElementById('searchInput').value = '';
+        renderTable(originalData);
+    } catch (error) {
         console.error('Error loading sheet data:', error);
-            }
-        }
+    }
+}
 
-    /**
-     * Applies active filters to the dataset and updates the table.
-     */
-    let currentFilteredData = { }; // To keep track of filtered data for subsequent filters
+/**
+ * Fetches and initializes the filter dropdowns dynamically.
+ */
+async function loadFilters() {
+    const sheetName = document.getElementById('sheetSelector').value;
 
-    function applyFilters() {
-        // Start with the current filtered data or original data if no filters have been applied yet
-        let dataToFilter = Object.keys(currentFilteredData).length ? currentFilteredData : originalData;
+    try {
+        const response = await fetch(`/filters/${sheetName}`);
+        const filters = await response.json();
 
-    // Initialize a new object to store filtered results
-    let newFilteredData = { };
-            Object.keys(dataToFilter).forEach(col => newFilteredData[col] = []); // Initialize structure
+        const headerRow = document.getElementById('headerRow');
+        const headerTitles = document.getElementById('headerTitles');
+        headerRow.innerHTML = '';
+        headerTitles.innerHTML = '';
 
-    // Get all active filters
-    const filterElements = document.querySelectorAll('[id^="filter-"]');
-    let activeFilters = { };
+        for (const column in filters) {
+            // Add column headers
+            const thTitle = document.createElement('th');
+            thTitle.textContent = column;
+            headerTitles.appendChild(thTitle);
 
-            filterElements.forEach(filter => {
-                const column = filter.id.replace('filter-', '');
-    const filterValue = filter.value;
-    if (filterValue) {
-        activeFilters[column] = filterValue;
-                }
+            // Add dropdown filters
+            const thFilter = document.createElement('th');
+            const select = document.createElement('select');
+            select.id = `filter-${column}`;
+            select.classList.add('filter-dropdown');
+            select.innerHTML = '<option value="">-- All --</option>'; // Default option
+
+            filters[column].forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
             });
 
-    // Filter rows based on ALL active filters
-    const numRows = Object.values(dataToFilter)[0]?.length || 0;
+            // Event listener for filter change
+            select.addEventListener('change', () => handleFilterChange(column, select.value));
+            thFilter.appendChild(select);
+            headerRow.appendChild(thFilter);
+        }
+    } catch (error) {
+        console.error('Error loading filters:', error);
+    }
+}
 
+/**
+ * Handles filter changes, updates the active filters, and dynamically recalculates valid filter options.
+ */
+function handleFilterChange(column, value) {
+    if (value) {
+        activeFilters[column] = value; // Add filter
+    } else {
+        delete activeFilters[column]; // Remove filter if empty
+    }
+    applyFilters(); // Reapply filters and search query
+    updateFilters(); // Update dropdown options dynamically
+}
+
+/**
+ * Dynamically recalculates valid filter options based on active filters.
+ */
+function updateFilters() {
+    const updatedFilters = {};
+
+    // Start with the original dataset and apply current active filters
+    const filteredData = getFilteredData();
+
+    // Recalculate valid options for each filter column
+    Object.keys(filteredData).forEach(column => {
+        updatedFilters[column] = [...new Set(filteredData[column])];
+    });
+
+    // Update each dropdown filter dynamically
+    for (const column in updatedFilters) {
+        const select = document.getElementById(`filter-${column}`);
+        if (!select) continue;
+
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- All --</option>'; // Reset dropdown
+
+        updatedFilters[column].forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+
+        // Retain the current filter value if still valid
+        if (currentValue && updatedFilters[column].includes(currentValue)) {
+            select.value = currentValue;
+        }
+    }
+}
+
+/**
+ * Applies all active filters and the search query to the original dataset.
+ */
+function applyFilters() {
+    const filteredData = getFilteredData(); // Apply column filters
+    const searchedData = applySearch(filteredData); // Apply search query
+    renderTable(searchedData);
+}
+
+/**
+ * Filters the dataset based on active column filters.
+ */
+function getFilteredData() {
+    const filteredData = {};
+    Object.keys(originalData).forEach(col => (filteredData[col] = []));
+
+    const numRows = Object.values(originalData)[0]?.length || 0;
     for (let i = 0; i < numRows; i++) {
         let includeRow = true;
 
-    for (const [column, value] of Object.entries(activeFilters)) {
-                    if (dataToFilter[column][i] !== value) {
-        includeRow = false;
-    break;
-                    }
-                }
-
-    if (includeRow) {
-        Object.keys(dataToFilter).forEach(col => {
-            newFilteredData[col].push(dataToFilter[col][i]);
-        });
-                }
+        for (const [column, value] of Object.entries(activeFilters)) {
+            if (originalData[column][i] !== value) {
+                includeRow = false;
+                break;
             }
-
-    // Update the global filtered data to enable subsequent filters to apply correctly
-    currentFilteredData = newFilteredData;
-
-    // Render the table with the newly filtered data
-    renderTable(newFilteredData);
         }
 
-        /**
-         * Renders the data table with the given dataset.
-         * @param {Object} data - The dataset to render.
-    */
-    function renderTable(data) {
-            const tableHeader = document.getElementById('tableHeader');
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = ''; // Clear the table body
+        if (includeRow) {
+            Object.keys(originalData).forEach(col => {
+                filteredData[col].push(originalData[col][i]);
+            });
+        }
+    }
 
-    // Check if there is data to display
-    if (!data || Object.keys(data).length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
-    return;
-            }
+    return filteredData;
+}
 
-    // Create the table header (only once)
-    if (!document.getElementById('headerTitles').hasChildNodes()) {
-                const headerRow = document.createElement('tr');
-                Object.keys(data).forEach(col => {
-                    const th = document.createElement('th');
-    th.textContent = col;
-    headerRow.appendChild(th);
-                });
-    tableHeader.appendChild(headerRow);
-            }
+/**
+ * Applies the search query to the filtered dataset.
+ */
+function applySearch(data) {
+    if (!searchQuery) return data;
 
-    // Render rows dynamically
+    const searchedData = {};
+    Object.keys(data).forEach(col => (searchedData[col] = []));
+
     const numRows = Object.values(data)[0]?.length || 0;
     for (let i = 0; i < numRows; i++) {
-                const tr = document.createElement('tr');
-                Object.keys(data).forEach(col => {
-                    const td = document.createElement('td');
-    td.textContent = data[col][i] || ''; // Handle empty cells
-    tr.appendChild(td);
-                });
-    tableBody.appendChild(tr);
-            }
+        const rowValues = Object.keys(data).map(col => String(data[col][i]).toLowerCase());
+        if (rowValues.some(value => value.includes(searchQuery))) {
+            Object.keys(data).forEach(col => {
+                searchedData[col].push(data[col][i]);
+            });
         }
+    }
 
-    // Initialize by loading sheets
-    loadSheets();
-</script>
+    return searchedData;
+}
+
+/**
+ * Renders the table with the provided dataset.
+ */
+function renderTable(data) {
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = ''; // Clear table body
+
+    if (!data || Object.keys(data).length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
+        return;
+    }
+
+    const numRows = Object.values(data)[0]?.length || 0;
+    for (let i = 0; i < numRows; i++) {
+        const row = document.createElement('tr');
+        Object.keys(data).forEach(col => {
+            const cell = document.createElement('td');
+            cell.textContent = data[col][i] || '';
+            row.appendChild(cell);
+        });
+        tableBody.appendChild(row);
+    }
+}
+
+/**
+ * Initializes search bar functionality.
+ */
+function initializeSearch() {
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', event => {
+        searchQuery = event.target.value.trim().toLowerCase();
+        applyFilters(); // Reapply filters with the search query
+    });
+}
+
+// Initialize sheet loading and search
+loadSheets();

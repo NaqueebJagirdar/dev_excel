@@ -17,7 +17,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import os
 
-app = Flask(__name__, static_folder=r"C:\Users\00090874\AppData\Local\Programs\Git\cmd\Exceltracker\static")
+app = Flask(__name__, static_folder="static")
 
 
 @app.route("/")
