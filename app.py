@@ -170,6 +170,28 @@ def get_sheet_data(sheet_name):
             result[row.column_name] = []
         result[row.column_name].append(row.value)
 
+    # Ensure Blank_Column is included
+    if result:
+        if "Blank_Column" not in result:
+            result["Blank_Column"] = [""] * len(result[next(iter(result))])  # Add blanks dynamically
+
+    # Debug log
+    print(f"Data for sheet '{sheet_name}': {result}")
+
+    return jsonify(result)
+
+
+    data = query.all()
+    result = {}
+    for row in data:
+        if row.column_name not in result:
+            result[row.column_name] = []
+        result[row.column_name].append(row.value)
+
+        # Ensure Blank_Column is included
+    if "Blank_Column" not in result:
+        result["Blank_Column"] = [""] * len(result[next(iter(result))])  # Add blanks
+
     return jsonify(result)
 
 

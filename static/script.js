@@ -216,13 +216,30 @@ function applySearch(data) {
  */
 function renderTable(data) {
     const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = ''; // Clear table body
+    const headerRow = document.getElementById('headerTitles');
+
+    // Clear table body and header
+    tableBody.innerHTML = '';
+    headerRow.innerHTML = '';
 
     if (!data || Object.keys(data).length === 0) {
         tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
         return;
     }
 
+    // Add headers dynamically based on data keys
+    Object.keys(data).forEach(col => {
+        const headerCell = document.createElement('th');
+        headerCell.textContent = col;
+        headerRow.appendChild(headerCell);
+    });
+
+    // Add a header for the blank column
+    const blankHeader = document.createElement('th');
+    blankHeader.textContent = 'Blank Column';
+    headerRow.appendChild(blankHeader);
+
+    // Add rows and columns
     const numRows = Object.values(data)[0]?.length || 0;
     for (let i = 0; i < numRows; i++) {
         const row = document.createElement('tr');
@@ -231,10 +248,37 @@ function renderTable(data) {
             cell.textContent = data[col][i] || '';
             row.appendChild(cell);
         });
+
+        // Add a blank column at the end
+        const blankCell = document.createElement('td');
+        blankCell.textContent = ''; // Blank value
+        row.appendChild(blankCell);
+
         tableBody.appendChild(row);
     }
 }
 
+/**
+ * Creates a table header cell with the given text content.
+ * @param {string} text - The text to display in the header cell.
+ * @returns {HTMLElement} - The header cell element.
+ */
+function createHeaderCell(text) {
+    const th = document.createElement('th');
+    th.textContent = text;
+    return th;
+}
+
+/**
+ * Creates a table data cell with the given text content.
+ * @param {string} text - The text to display in the data cell.
+ * @returns {HTMLElement} - The data cell element.
+ */
+function createDataCell(text) {
+    const td = document.createElement('td');
+    td.textContent = text || '';
+    return td;
+}
 /**
  * Initializes search bar functionality.
  */
