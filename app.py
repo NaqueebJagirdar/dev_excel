@@ -170,60 +170,10 @@ def get_sheet_data(sheet_name):
             result[row.column_name] = []
         result[row.column_name].append(row.value)
 
-    # Ensure Blank_Column is included
-    if result:
-        if "Blank_Column" not in result:
-            result["Blank_Column"] = [""] * len(result[next(iter(result))])  # Add blanks dynamically
-
     # Debug log
     print(f"Data for sheet '{sheet_name}': {result}")
 
     return jsonify(result)
-
-
-    data = query.all()
-    result = {}
-    for row in data:
-        if row.column_name not in result:
-            result[row.column_name] = []
-        result[row.column_name].append(row.value)
-
-        # Ensure Blank_Column is included
-    if "Blank_Column" not in result:
-        result["Blank_Column"] = [""] * len(result[next(iter(result))])  # Add blanks
-
-    return jsonify(result)
-
-@app.route('/update-blank-column', methods=['POST'])
-def update_blank_column():
-    data = request.json
-    sheet_name = data.get('sheetName')
-    row_index = int(data.get('rowIndex'))
-    new_value = data.get('newValue')
-
-    print(f"Received update for sheet: {sheet_name}, row: {row_index}, value: {new_value}")  # Debug log
-
-    try:
-        row_to_update = (
-            session.query(SheetData)
-            .filter(SheetData.sheet_name == sheet_name)
-            .filter(SheetData.column_name == "Blank_Column")
-            .offset(row_index)
-            .limit(1)
-            .first()
-        )
-
-        if row_to_update:
-            print(f"Updating row ID: {row_to_update.id}")  # Debug log
-            row_to_update.value = new_value
-            session.commit()
-            return jsonify({"status": "success"})
-        else:
-            print("Row not found")  # Debug log
-            return jsonify({"status": "error", "message": "Row not found"}), 404
-    except Exception as e:
-        print(f"Error: {e}")  # Debug log
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     process_excel(EXCEL_FILE_PATH)
