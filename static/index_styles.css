@@ -1,0 +1,119 @@
+/* General body styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa; /* Light grey background */
+    color: #333;
+}
+
+/* Container for spacing and alignment */
+.container {
+    width: 100%;
+    margin: 20px auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* Page heading styles */
+h1, h2 {
+    color: #0077b6;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Dropdown, button, and input field styling */
+select, button, input[type="text"] {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    font-size: 1rem;
+    border: 1px solid #0077b6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button {
+    background-color: #0077b6;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.1s;
+}
+
+button:hover {
+    background-color: #005a8c;
+    transform: scale(1.03);
+}
+
+/* Search bar styling */
+.search-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.search-container input {
+    flex: 0 0 250px; /* Set a fixed width for search bar */
+    margin-right: 10px;
+}
+
+/* Table styling */
+table {
+    width: 100%;
+    border-collapse: separate; /* Allow border-radius */
+    border-spacing: 0;
+    margin-top: 20px;
+    margin-left: 0; /* Align table to the extreme left */
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 12px; /* Chamfer effect */
+    overflow: hidden; /* Prevents sharp edges on rounded corners */
+}
+
+th, td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+/* Table header styling with soft corners */
+th {
+    background: linear-gradient(to bottom, #0077b6, #005a8c);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Chamfer soft edges for table headers */
+th:first-child {
+    border-top-left-radius: 12px;
+}
+
+th:last-child {
+    border-top-right-radius: 12px;
+}
+
+/* Alternating row colors */
+tr:nth-child(even) {
+    background-color: #f2f9ff; /* Light blue for even rows */
+}
+
+tr:nth-child(odd) {
+    background-color: #ffffff; /* White for odd rows */
+}
+
+/* Soft rounded bottom corners for last row */
+tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+/* Hover effect for rows */
+tr:hover {
+    background-color: #d0ebff;
+    transition: background 0.3s;
+}
