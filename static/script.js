@@ -240,65 +240,16 @@ function renderTable(data) {
         const row = document.createElement('tr');
         Object.keys(data).forEach(col => {
             const cell = document.createElement('td');
-
-            if (col === 'Blank_Column') {
-                // Create an input field for the Blank_Column
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = data[col][i] || '';
-                input.dataset.rowIndex = i; // Store row index
-
-                // Save changes on blur or Enter key
-                input.addEventListener('blur', handleEdit);
-                input.addEventListener('keypress', event => {
-                    if (event.key === 'Enter') {
-                        input.blur(); // Trigger blur event to save
-                    }
-                });
-
-                cell.appendChild(input);
-            } else {
-                cell.textContent = data[col][i] || '';
-            }
-
+            cell.textContent = data[col][i] || '';
             row.appendChild(cell);
         });
         tableBody.appendChild(row);
     }
 }
-async function handleEdit(event) {
-    const input = event.target;
-    const rowIndex = input.dataset.rowIndex; // Get row index
-    const newValue = input.value; // Get updated value
 
-    // Update the value in the frontend
-    originalData['Blank_Column'][rowIndex] = newValue;
-
-    // Optionally send the updated value to the backend
-    const sheetName = document.getElementById('sheetSelector').value;
-    try {
-        const response = await fetch('/update-blank-column', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sheetName: sheetName,
-                rowIndex: rowIndex,
-                newValue: newValue,
-            }),
-        });
-
-        if (response.ok) {
-            console.log('Value updated successfully');
-        } else {
-            console.error('Failed to update value');
-        }
-    } catch (error) {
-        console.error('Error updating value:', error);
-    }
-}
-
+/**
+ * Initializes search bar functionality.
+ */
 /**
  * Creates a table header cell with the given text content.
  * @param {string} text - The text to display in the header cell.

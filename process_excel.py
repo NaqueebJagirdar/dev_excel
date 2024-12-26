@@ -25,9 +25,6 @@ def process_excel(file_path):
         file_path (str): Path to the Excel file.
     """
 
-    # Sheets to include the Blank_Column
-    sheets_with_blank_column = ['All_Jobs_Ranked', 'All_Jobs_unRanked', 'Projects_In_Process']
-
     # Load the Excel file
     xls = pd.ExcelFile(file_path)
     print(f"Processing sheets: {xls.sheet_names}")
@@ -39,11 +36,7 @@ def process_excel(file_path):
     # Process each sheet
     for sheet_name in xls.sheet_names:
         df = xls.parse(sheet_name)
-        print(f"Original columns in {sheet_name}: {df.columns}")
-        # Add a blank column
-        if sheet_name in sheets_with_blank_column:
-            df["Blank_Column"] = ""  # Add the blank column
-            print(f"Updated columns in {sheet_name}: {df.columns}")  # Log updated columns
+        print(f"Processing sheet: {sheet_name}")
 
         # Dynamically process rows and columns
         for _, row in df.iterrows():
