@@ -51,6 +51,9 @@ class ProjectData(Base):
     project_id = Column(String, unique=True, nullable=False)
     data = Column(Text, nullable=True)  # Field to store project-specific data
     is_complex = Column(String, default="no")
+    forested = Column(String, default="no")  # New field
+    recalculation = Column(String, default="no")  # New field
+    cfd = Column(String, default="no")  # New field
 
 
 # Create tables for all models
