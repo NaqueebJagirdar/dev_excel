@@ -68,24 +68,18 @@ async function loadFilters() {
         const response = await fetch(`/filters/${sheetName}`);
         const filters = await response.json();
 
-        const headerRow = document.getElementById('headerRow');
-        const headerTitles = document.getElementById('headerTitles');
-        headerRow.innerHTML = '';
-        headerTitles.innerHTML = '';
+        const filterRow = document.getElementById('headerRow'); // Only the filter row
+        filterRow.innerHTML = ''; // Clear existing filters
 
+        // Add dropdown filters only (no column headers here)
         for (const column in filters) {
-            // Add column headers
-            const thTitle = document.createElement('th');
-            thTitle.textContent = column;
-            headerTitles.appendChild(thTitle);
-
-            // Add dropdown filters
-            const thFilter = document.createElement('th');
-            const select = document.createElement('select');
+            const thFilter = document.createElement('th'); // Create a table header for filters
+            const select = document.createElement('select'); // Create dropdown
             select.id = `filter-${column}`;
             select.classList.add('filter-dropdown');
-            select.innerHTML = '<option value="">-- All --</option>'; // Default option
+            select.innerHTML = '<option value="">-- All --</option>'; // Default "All" option
 
+            // Populate dropdown with filter values
             filters[column].forEach(value => {
                 const option = document.createElement('option');
                 option.value = value;
@@ -93,15 +87,16 @@ async function loadFilters() {
                 select.appendChild(option);
             });
 
-            // Event listener for filter change
+            // Add event listener for filter changes
             select.addEventListener('change', () => handleFilterChange(column, select.value));
             thFilter.appendChild(select);
-            headerRow.appendChild(thFilter);
+            filterRow.appendChild(thFilter); // Append filter dropdown to filter row
         }
     } catch (error) {
         console.error('Error loading filters:', error);
     }
 }
+
 
 /**
  * Handles filter changes, updates the active filters, and dynamically recalculates valid filter options.
@@ -227,10 +222,12 @@ function renderTable(data) {
         return;
     }
 
-    // Add headers dynamically based on data keys
     Object.keys(data).forEach(col => {
-        const headerCell = document.createElement('th');
-        headerCell.textContent = col;
+        // Instead of manually creating 'th', call createHeaderCell()
+        // const headerCell = document.createElement('th');
+        // headerCell.textContent = col;
+
+        const headerCell = createHeaderCell(col);
         headerRow.appendChild(headerCell);
     });
 
@@ -239,8 +236,11 @@ function renderTable(data) {
     for (let i = 0; i < numRows; i++) {
         const row = document.createElement('tr');
         Object.keys(data).forEach(col => {
-            const cell = document.createElement('td');
-            cell.textContent = data[col][i] || '';
+            // Instead of manually creating 'td', call createDataCell()
+            // const cell = document.createElement('td');
+            // cell.textContent = data[col][i] || '';
+
+            const cell = createDataCell(data[col][i]);
             row.appendChild(cell);
         });
         tableBody.appendChild(row);
