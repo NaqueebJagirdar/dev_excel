@@ -185,7 +185,6 @@ def get_sheet_data(sheet_name):
 @app.route("/project/<project_id>", methods=["GET", "POST"])
 def project_page(project_id):
     if request.method == "GET":
-        # Fetch existing project data
         project = session.query(ProjectData).filter_by(project_id=project_id).first()
         if project:
             return render_template(
@@ -193,40 +192,54 @@ def project_page(project_id):
                 project_id=project_id,
                 data=project.data,
                 is_complex=project.is_complex,
+                forested=project.forested,
+                recalculation=project.recalculation,
+                cfd=project.cfd,
             )
         else:
-            # Render blank page for a new project
             return render_template(
-                "project.html", project_id=project_id, data=None, is_complex="no"
+                "project.html",
+                project_id=project_id,
+                data=None,
+                is_complex="no",
+                forested="no",
+                recalculation="no",
+                cfd="no",
             )
     elif request.method == "POST":
-        # Save or update project data
         data = request.form.get("data")
         is_complex = request.form.get("complex")
-        print(f"Received data: {data}, is_complex: {is_complex}")  # Debug line
+        forested = request.form.get("forested")
+        recalculation = request.form.get("recalculation")
+        cfd = request.form.get("cfd")
+
         project = session.query(ProjectData).filter_by(project_id=project_id).first()
         if project:
-            project.data = data  # Update existing project
+            project.data = data
             project.is_complex = is_complex
+            project.forested = forested
+            project.recalculation = recalculation
+            project.cfd = cfd
         else:
             new_project = ProjectData(
-                project_id=project_id, data=data, is_complex=is_complex
+                project_id=project_id,
+                data=data,
+                is_complex=is_complex,
+                forested=forested,
+                recalculation=recalculation,
+                cfd=cfd,
             )
-            session.add(new_project)  # Add new project
+            session.add(new_project)
         session.commit()
-        # Debugging: Verify database update
-        updated_project = (
-            session.query(ProjectData).filter_by(project_id=project_id).first()
-        )
-        print(
-            f"Updated Project Data: {updated_project.data}, Is Complex: {updated_project.is_complex}"
-        )
 
         return render_template(
             "project.html",
             project_id=project_id,
             data=data,
             is_complex=is_complex,
+            forested=forested,
+            recalculation=recalculation,
+            cfd=cfd,
         )
 
 
