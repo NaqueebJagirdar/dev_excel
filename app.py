@@ -8,14 +8,16 @@ It supports REST APIs for retrieving sheet data, filtering based on columns,
 and rendering a web-based tracker interface.
 """
 
-from flask import Flask, jsonify, render_template, request
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, and_
-from process_excel import process_excel
-from models import SheetData
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import os
+
+from flask import Flask, jsonify, render_template, request
+from sqlalchemy import and_, create_engine
+from sqlalchemy.orm import sessionmaker
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+from models import ProjectData, SheetData
+from process_excel import process_excel
 
 app = Flask(__name__, static_folder="static")
 
@@ -70,11 +72,13 @@ class FileEventHandler(FileSystemEventHandler):
         """
         Handle the file modification event.
 
-        Checks if the modified file matches the monitored file path and triggers
+        Checks if the modified file
+        matches the monitored file path and triggers
         the Excel processing function.
 
         Args:
-            event (FileSystemEvent): The event object containing information about
+            event (FileSystemEvent): The event
+            object containing information about
             the file system event.
         """
         if event.src_path.endswith(self.file_path):
@@ -87,8 +91,10 @@ def start_file_monitoring(file_path):
     """
     Start monitoring a specific file for changes.
 
-    This function initializes a file system observer to monitor a given file for modifications.
-    When the file is modified, the associated event handler processes the changes.
+    This function initializes a file system
+    observer to monitor a given file for modifications.
+    When the file is modified, the associated
+    event handler processes the changes.
 
     Args:
         file_path (str): The path of the file to monitor for changes.
@@ -174,6 +180,55 @@ def get_sheet_data(sheet_name):
     print(f"Data for sheet '{sheet_name}': {result}")
 
     return jsonify(result)
+
+
+@app.route("/project/<project_id>", methods=["GET", "POST"])
+def project_page(project_id):
+    if request.method == "GET":
+        # Fetch existing project data
+        project = session.query(ProjectData).filter_by(project_id=project_id).first()
+        if project:
+            return render_template(
+                "project.html",
+                project_id=project_id,
+                data=project.data,
+                is_complex=project.is_complex,
+            )
+        else:
+            # Render blank page for a new project
+            return render_template(
+                "project.html", project_id=project_id, data=None, is_complex="no"
+            )
+    elif request.method == "POST":
+        # Save or update project data
+        data = request.form.get("data")
+        is_complex = request.form.get("complex")
+        print(f"Received data: {data}, is_complex: {is_complex}")  # Debug line
+        project = session.query(ProjectData).filter_by(project_id=project_id).first()
+        if project:
+            project.data = data  # Update existing project
+            project.is_complex = is_complex
+        else:
+            new_project = ProjectData(
+                project_id=project_id, data=data, is_complex=is_complex
+            )
+            session.add(new_project)  # Add new project
+        session.commit()
+        # Debugging: Verify database update
+        updated_project = (
+            session.query(ProjectData).filter_by(project_id=project_id).first()
+        )
+        print(
+            f"Updated Project Data: {updated_project.data}, Is Complex: {updated_project.is_complex}"
+        )
+
+        return render_template(
+            "project.html",
+            project_id=project_id,
+            data=data,
+            is_complex=is_complex,
+        )
+
 
 if __name__ == "__main__":
     process_excel(EXCEL_FILE_PATH)

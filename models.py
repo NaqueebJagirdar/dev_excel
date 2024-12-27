@@ -5,12 +5,19 @@ The `SheetData` class represents rows in the `sheet_data` table, which stores
 information about spreadsheet data, including sheet names, column names, values,
 and optional date-related values.
 """
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
-from sqlalchemy.orm import declarative_base
 from datetime import datetime
 
-# Explicitly type annotate Base
-Base: declarative_base = declarative_base()
+from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+# General database setup
+engine = create_engine("sqlite:///database.db")
+Session = sessionmaker(bind=engine)
+session = Session()
+
+
+# Declarative base
+Base = declarative_base()
 
 
 class SheetData(Base):
@@ -19,11 +26,14 @@ class SheetData(Base):
 
     Attributes:
         id (int): The primary key of the record, auto-incremented.
-        sheet_name (str): The name of the sheet where the data originates. Cannot be null.
+        sheet_name (str): The name of the sheet
+        where the data originates. Cannot be null.
         column_name (str): The name of the column in the sheet. Cannot be null.
         value (str, optional): The value stored in the column. Can be null.
-        date_value (datetime, optional): A date value associated with the record, if any.
-        created_at (datetime): The timestamp of when the record was created. Defaults to the current UTC time.
+        date_value (datetime, optional): A date value
+        associated with the record, if any.
+        created_at (datetime): The timestamp of when the
+        record was created. Defaults to the current UTC time.
     """
 
     __tablename__ = "sheet_data"
@@ -35,6 +45,13 @@ class SheetData(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# Create the database
-engine = create_engine("sqlite:///database.db")
+class ProjectData(Base):
+    __tablename__ = "project_data"
+    id = Column(Integer, primary_key=True)
+    project_id = Column(String, unique=True, nullable=False)
+    data = Column(Text, nullable=True)  # Field to store project-specific data
+    is_complex = Column(String, default="no")
+
+
+# Create tables for all models
 Base.metadata.create_all(engine)
