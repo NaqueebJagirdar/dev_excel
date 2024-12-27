@@ -222,27 +222,33 @@ function renderTable(data) {
         return;
     }
 
+    // Create table headers dynamically
     Object.keys(data).forEach(col => {
-        // Instead of manually creating 'th', call createHeaderCell()
-        // const headerCell = document.createElement('th');
-        // headerCell.textContent = col;
-
         const headerCell = createHeaderCell(col);
         headerRow.appendChild(headerCell);
     });
 
-    // Add rows and columns
+    // Add rows dynamically
     const numRows = Object.values(data)[0]?.length || 0;
     for (let i = 0; i < numRows; i++) {
         const row = document.createElement('tr');
-        Object.keys(data).forEach(col => {
-            // Instead of manually creating 'td', call createDataCell()
-            // const cell = document.createElement('td');
-            // cell.textContent = data[col][i] || '';
 
-            const cell = createDataCell(data[col][i]);
+        // Add table cells for each column
+        Object.keys(data).forEach(col => {
+            const cell = createDataCell(data[col][i] || '');
             row.appendChild(cell);
         });
+
+        // Add row click functionality to redirect to project-specific page
+        row.addEventListener('click', () => {
+            const projectId = data.ID[i]; // Assuming `ID` is unique for each row
+            if (projectId) {
+                window.location.href = `/project/${projectId}`; // Redirect to project page
+            } else {
+                console.error("Project ID is missing for row:", i);
+            }
+        });
+
         tableBody.appendChild(row);
     }
 }

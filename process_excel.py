@@ -5,8 +5,9 @@ This script reads Excel files, processes the data row by row, and
 stores the data in a database using SQLAlchemy ORM models.
 """
 import pandas as pd
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from models import SheetData
 
 # Database connection
@@ -49,7 +50,7 @@ def process_excel(file_path):
 
                 # If it's a Pandas Timestamp, convert to Python datetime
                 if isinstance(cell_value, pd.Timestamp):
-                    date_value = cell_value.to_pydatetime()  # pure Python datetime
+                    date_value = cell_value.to_pydatetime()
                 else:
                     # Store non-dates (and also Timestamps
                     # that are not recognized) as text
