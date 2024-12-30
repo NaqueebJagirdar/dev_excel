@@ -29,16 +29,49 @@
         <table id="dataTable">
             <thead id="tableHeader">
                 <tr id="headerTitles">
-                    <!-- Column titles will be dynamically inserted here -->
+                    <th>Checker</th>
+                    <th>Category_03</th>
+                    <th>Country</th>
+                    <th>Deadline</th>
+                    <!-- Add more columns as needed -->
                 </tr>
                 <tr id="headerRow">
-                    <!-- Filter dropdowns will be dynamically inserted here -->
+                    <th>
+                        <select id="checkerFilter" onchange="applyFilter('Checker')">
+                            <option value="">-- All --</option>
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </th>
+                    <th>
+                        <select id="categoryFilter" onchange="applyFilter('Category_03')">
+                            <option value="">-- All --</option>
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </th>
+                    <th>
+                        <select id="countryFilter" onchange="applyFilter('Country')">
+                            <option value="">-- All --</option>
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </th>
+                    <th>
+                        <select id="deadlineFilter" onchange="applyFilter('Deadline')">
+                            <option value="">-- All --</option>
+                            <!-- Options will be dynamically populated -->
+                        </select>
+                    </th>
+                    <!-- Add more filter dropdowns as needed -->
                 </tr>
             </thead>
             <tbody id="tableBody">
                 <!-- Table rows will be dynamically inserted here -->
             </tbody>
         </table>
+
+
+        <datalist id="checker-options">
+                        <!-- Options will be dynamically populated using JavaScript -->
+        </datalist>
     </div>
 
     <!-- Link to the external JavaScript file -->
