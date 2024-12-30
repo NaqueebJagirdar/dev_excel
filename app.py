@@ -160,9 +160,9 @@ def get_column_filters(sheet_name):
 @app.route("/data/<sheet_name>", methods=["GET"])
 def get_sheet_data(sheet_name):
     """Fetch filtered data for a given sheet."""
-    # Get filter parameters from the request
     filters = request.args.to_dict()
 
+    # Query filtered data based on sheet name and applied filters
     query = session.query(SheetData).filter(SheetData.sheet_name == sheet_name)
     for column, value in filters.items():
         query = query.filter(
@@ -171,13 +171,34 @@ def get_sheet_data(sheet_name):
 
     data = query.all()
     result = {}
+
+    # Process data into the result dictionary
     for row in data:
         if row.column_name not in result:
             result[row.column_name] = []
         result[row.column_name].append(row.value)
 
-    # Debug log
-    print(f"Data for sheet '{sheet_name}': {result}")
+    # Debug: Log all columns in result
+    print("Columns in result before filtering:", list(result.keys()))
+
+    # Add the "checker" field if it exists in the database
+    project_ids = result.get("ID", [])
+    if project_ids:
+        # Fetch all project data in one query
+        projects = (
+            session.query(ProjectData)
+            .filter(ProjectData.project_id.in_(project_ids))
+            .all()
+        )
+        project_checkers = {p.project_id: p.checker for p in projects}
+
+        # Populate the checker field
+        result["checker"] = [
+            project_checkers.get(pid, "Not Assigned") for pid in project_ids
+        ]
+
+    # Log the final result for debugging
+    print(f"Final data for sheet '{sheet_name}':", result)
 
     return jsonify(result)
 
@@ -241,6 +262,59 @@ def project_page(project_id):
             recalculation=recalculation,
             cfd=cfd,
         )
+
+
+@app.route("/update_checker/<project_id>", methods=["POST"])
+def update_checker(project_id):
+    """Update the checker field for a project and dynamically handle empty or new checker entries."""
+    # Parse the JSON payload
+    data = request.json
+    checker = data.get("checker", "")  # Default to an empty string if not provided
+
+    # Log the incoming request
+    print(f"Incoming request: project_id={project_id}, checker={checker or '(none)'}")
+
+    # Allow blank values to clear the checker
+    if checker is None or checker.strip() == "":
+        checker = None  # Set to None or handle as needed
+
+    # Check if the project exists in the database
+    project = session.query(ProjectData).filter_by(project_id=project_id).first()
+
+    if not project:
+        # Log and create a new project entry if it doesn't exist
+        print(f"Project with ID {project_id} not found. Creating a new entry.")
+        project = ProjectData(
+            project_id=project_id,
+            data=None,
+            is_complex="no",
+            forested="no",
+            recalculation="no",
+            cfd="no",
+            checker=None,  # Default to None when creating a new project
+        )
+        session.add(project)
+        session.commit()
+
+    # Update the checker field
+    print(f"Updating checker for project ID {project_id} to '{checker or '(none)'}'")
+    project.checker = checker
+    session.commit()
+
+    # Log the successful update
+    print(
+        f"Successfully updated checker for project ID {project_id} to '{project.checker or '(none)'}'"
+    )
+
+    return jsonify({"message": "Checker updated successfully"}), 200
+
+
+@app.route("/checker_list", methods=["GET"])
+def get_checker_list():
+    """Return a list of all valid checker names, including newly added ones."""
+    valid_checkers = session.query(ProjectData.checker).distinct().all()
+    checker_names = [checker[0] for checker in valid_checkers if checker[0]]
+    return jsonify(checker_names)
 
 
 if __name__ == "__main__":

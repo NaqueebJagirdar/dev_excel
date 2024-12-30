@@ -54,6 +54,7 @@ class ProjectData(Base):
     forested = Column(String, default="no")  # New field
     recalculation = Column(String, default="no")  # New field
     cfd = Column(String, default="no")  # New field
+    checker = Column(String, nullable=True)
 
 
 # Create tables for all models
