@@ -33,8 +33,8 @@ async function loadSheets() {
     });
 
     // 2) Load first sheet + 3) load filters
-    await loadSheet();
-    await loadFilters();
+        await loadSheet();
+        await loadFilters();
 
     // 4) Initialize search
     initializeSearch();
@@ -90,17 +90,30 @@ async function loadFilters() {
 
     // Build the filter <th>/<select> for each column
     for (const column in filters) {
-      // We'll skip "checker" here, so it doesn't come from DB columns
-      // We'll add a special filter dropdown for "checker" below
+      const th = document.createElement('th');
+      const select = document.createElement('select');
+      select.id = `filter-${column}`;
+      select.classList.add('filter-dropdown');
+      select.innerHTML = '<option value="">-- All --</option>';
+
+      // Populate dropdown options
+      filters[column].forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+
+      // Add event listener for filter changes
+      select.addEventListener('change', () => handleFilterChange(column, select.value));
+      th.appendChild(select);
+      filterRow.appendChild(th);
+
       if (column === 'checker') {
         continue;
       }
 
-      const th = document.createElement('th');
-      const uniqueId = `filter-${column}-${Math.random().toString(36).substring(2, 10)}`;
-      select.id = uniqueId;
-      select.classList.add('filter-dropdown');
-      select.innerHTML = '<option value="">-- All --</option>';
+
 
       // Populate
       filters[column].forEach(value => {
@@ -111,7 +124,6 @@ async function loadFilters() {
       });
 
       // Listen for changes
-      select.addEventListener('change', () => handleFilterChange(column, select.value));
       th.appendChild(select);
       filterRow.appendChild(th);
     }
@@ -163,14 +175,21 @@ async function loadCheckerList() {
  * When a filter changes, record it in 'activeFilters' and re-render.
  */
 function handleFilterChange(column, value) {
-  if (value) {
-    activeFilters[column] = value;
-  } else {
+  if (value === '') {
+    // Remove the filter when "All" is selected
     delete activeFilters[column];
+  } else {
+    // Update the filter with the selected value
+    activeFilters[column] = value;
   }
+
+  // Apply filters to update the table
   applyFilters();
+
+  // Dynamically update other filter options based on current filtered data
   updateFilters();
 }
+
 
 /**
  * Rebuild valid filter options after we apply the current filters + search.
