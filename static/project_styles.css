@@ -1,7 +1,7 @@
 /* General styling for the page */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f2f2f2;
+    background: linear-gradient(to bottom, #d9f9d9, #b2f2b2);
     margin: 0;
     padding: 0;
     display: flex;

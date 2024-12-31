@@ -3,7 +3,11 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f8f9fa; /* Light grey background */
+    background: linear-gradient(to bottom, #d9f9d9, #b2f2b2);
+    background-size: cover; /* Ensures the image covers the entire page */
+    background-position: center; /* Centers the image */
+    background-repeat: no-repeat; /* Prevents tiling */
+    height: 100vh; /* Ensures the body takes up the full viewport height */
     color: #333;
 }
 
@@ -13,6 +17,10 @@ body {
     margin: 20px auto;
     padding: 0 20px;
     box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.85); /* White background with slight transparency */
+    border-radius: 12px; /* Rounded corners for the container */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Add subtle shadow */
+    padding: 20px;
 }
 
 /* Page heading styles */
