@@ -175,46 +175,49 @@ async function loadCheckerList() {
  * When a filter changes, record it in 'activeFilters' and re-render.
  */
 function handleFilterChange(column, value) {
+  const headerCell = document.querySelector(`#headerTitles th[data-column="${column}"]`);
+
   if (value === '') {
     // Remove the filter when "All" is selected
     delete activeFilters[column];
+    if (headerCell) headerCell.textContent = column; // Reset header text
   } else {
     // Update the filter with the selected value
     activeFilters[column] = value;
+    if (headerCell) headerCell.textContent = `${column} (${value})`; // Display active filter
   }
 
   // Apply filters to update the table
   applyFilters();
 
-  // Dynamically update other filter options based on current filtered data
+  // Dynamically update dropdown options
   updateFilters();
 }
+
 
 
 /**
  * Rebuild valid filter options after we apply the current filters + search.
  */
 function updateFilters() {
-  // Start with the already filtered data
+  // Get the currently filtered data
   const filteredData = getFilteredData();
   const updatedFilters = {};
 
-  // Recompute which values are available for each column
+  // Compute unique values for each column from the filtered data
   Object.keys(filteredData).forEach(col => {
     updatedFilters[col] = [...new Set(filteredData[col])];
   });
 
   // Update each dropdown
   for (const column in updatedFilters) {
-    // We skip checker if you want to always show the *full* checkerList
-    if (column === 'checker') continue;
-
     const select = document.getElementById(`filter-${column}`);
     if (!select) continue;
 
-    const currentValue = select.value;
-    select.innerHTML = '<option value="">-- All --</option>';
+    const currentValue = select.value; // Save the current selection
+    select.innerHTML = '<option value="">-- All --</option>'; // Reset to "All"
 
+    // Populate the dropdown with updated unique values
     updatedFilters[column].forEach(value => {
       const option = document.createElement('option');
       option.value = value;
@@ -222,16 +225,15 @@ function updateFilters() {
       select.appendChild(option);
     });
 
-    // If the old value is still valid, keep it
+    // Retain the previous selection if it is still valid
     if (currentValue && updatedFilters[column].includes(currentValue)) {
       select.value = currentValue;
+    } else {
+      select.value = ''; // Reset to "All" if the previous value is no longer valid
     }
   }
-
-  // If you prefer the "checker" filter to also be dynamically trimmed
-  // to what's currently visible, you can do that here as well
-  // but you'd lose the "always show all checkers" effect.
 }
+
 
 /**
  * Apply all active filters + the current search query to 'originalData'.
@@ -300,7 +302,7 @@ function renderTable(data) {
     // Clear existing table content
     tableBody.innerHTML = '';
     headerRow.innerHTML = '';
-    filterRow.innerHTML = ''; // Clear filters
+    filterRow.innerHTML = '';
 
     // Handle case where no data is available
     if (!data || Object.keys(data).length === 0) {
@@ -310,26 +312,27 @@ function renderTable(data) {
 
     // Dynamically get columns excluding "checker" and filtering out empty or undefined keys
     const columns = Object.keys(data).filter(col => {
-        // Check if the column exists, is not "checker", and contains at least one non-empty value
         return col && col !== 'checker' && data[col]?.some(value => value !== undefined && value !== '');
     });
 
-    console.log("Filtered columns:", columns); // Debugging
+    console.log("Filtered columns:", columns);
 
-    // Create header cells for each column dynamically
+    // Create column headers dynamically
     columns.forEach(col => {
+        // Header titles
         const th = document.createElement('th');
+        th.setAttribute('data-column', col);
         th.textContent = col;
         headerRow.appendChild(th);
 
-        // Create filter dropdown for each column
+        // Filter dropdowns
         const thFilter = document.createElement('th');
         const select = document.createElement('select');
         select.id = `filter-${col}`;
         select.classList.add('filter-dropdown');
         select.innerHTML = '<option value="">-- All --</option>'; // Default "All" option
 
-        // Populate dropdown with unique values for the column
+        // Populate dropdown with unique values
         const uniqueValues = [...new Set(data[col].filter(value => value !== undefined && value !== ''))];
         uniqueValues.forEach(value => {
             const option = document.createElement('option');
@@ -338,79 +341,72 @@ function renderTable(data) {
             select.appendChild(option);
         });
 
-        // Add event listener for filter changes
         select.addEventListener('change', () => handleFilterChange(col, select.value));
         thFilter.appendChild(select);
         filterRow.appendChild(thFilter);
     });
 
-    // Add "Checker" column header
+    // Add "Checker" and "Actions" headers
     const checkerHeader = document.createElement('th');
     checkerHeader.textContent = "Checker";
     headerRow.appendChild(checkerHeader);
 
-    // Add "Actions" column header for the button
     const actionsHeader = document.createElement('th');
     actionsHeader.textContent = "Actions";
     headerRow.appendChild(actionsHeader);
 
-    // Determine number of rows based on the length of the first column's data
-    const rowCount = data[columns[0]]?.length || 0;
-
-    // Ensure "checker-options" datalist exists and is populated
+    // Ensure "checker-options" datalist exists
     let datalist = document.getElementById('checker-options');
     if (!datalist) {
         datalist = document.createElement('datalist');
         datalist.id = 'checker-options';
 
-        // Populate the datalist with checker options
+        // Populate datalist with checker options
         checkerList.forEach(checker => {
             const option = document.createElement('option');
             option.value = checker;
             datalist.appendChild(option);
         });
 
-        document.body.appendChild(datalist); // Append datalist to the DOM
+        document.body.appendChild(datalist); // Append to the DOM
     }
 
-    // Create table rows dynamically
+    // Render data rows dynamically
+    const rowCount = data[columns[0]]?.length || 0;
     for (let i = 0; i < rowCount; i++) {
         const row = document.createElement('tr');
 
-        // Add data cells for each column dynamically
+        // Add data cells dynamically
         columns.forEach(col => {
             const td = document.createElement('td');
-            td.textContent = data[col][i] || ''; // Fill empty values with an empty string
+            td.textContent = data[col][i] || ''; // Empty values as empty string
             row.appendChild(td);
         });
 
-        // Add the "Checker" cell with a predictive input field
+        // Add "Checker" input field
         const checkerCell = document.createElement('td');
         const currentChecker = data.checker ? data.checker[i] || "Not Assigned" : "Not Assigned";
 
         const input = document.createElement('input');
         input.type = 'text';
         input.value = currentChecker;
-        input.classList.add('checker-input'); // Add optional styling class
-        input.setAttribute('list', 'checker-options'); // Attach datalist for predictive suggestions
+        input.classList.add('checker-input'); // Optional styling
+        input.setAttribute('list', 'checker-options');
 
-        // Prevent row click when interacting with the input
-        input.addEventListener('click', (event) => event.stopPropagation());
-
-        // Add event listeners to handle saving the updated checker
+        input.addEventListener('click', event => event.stopPropagation());
         input.addEventListener('blur', () => saveChecker(data.ID[i], input.value.trim()));
         input.addEventListener('keydown', event => {
-            if (event.key === 'Enter') input.blur(); // Trigger blur on Enter key
+            if (event.key === 'Enter') input.blur();
         });
 
         checkerCell.appendChild(input);
         row.appendChild(checkerCell);
 
-        // Add a button to redirect to the project page
+        // Add "Actions" button
         const actionsCell = document.createElement('td');
         const viewButton = document.createElement('button');
         viewButton.textContent = "View Project";
-        viewButton.classList.add('view-project-button'); // Optional class for styling
+        viewButton.classList.add('view-project-button'); // Optional styling
         viewButton.addEventListener('click', () => {
             window.location.href = `/project/${data.ID[i]}`;
         });
@@ -421,9 +417,9 @@ function renderTable(data) {
         tableBody.appendChild(row);
     }
 
-    // Log success for debugging purposes
     console.log(`Rendered table with ${rowCount} rows and ${columns.length} columns.`);
 }
+
 
 
 

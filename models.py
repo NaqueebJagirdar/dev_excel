@@ -57,5 +57,18 @@ class ProjectData(Base):
     checker = Column(String, nullable=True)
 
 
-# Create tables for all models
+class SheetAnalysis(Base):
+    """
+    A SQLAlchemy ORM model to track unassigned WSE Responsible statistics
+    for specific sheets.
+    """
+
+    __tablename__ = "wse_statistics"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sheet_name = Column(String, nullable=False)
+    unassigned_count = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# Update the database schema
 Base.metadata.create_all(engine)

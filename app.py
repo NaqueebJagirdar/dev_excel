@@ -9,17 +9,27 @@ and rendering a web-based tracker interface.
 """
 
 import os
+from datetime import datetime
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_, create_engine
 from sqlalchemy.orm import sessionmaker
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from models import ProjectData, SheetData
+from models import ProjectData, SheetAnalysis, SheetData
 from process_excel import process_excel
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
+app.config[
+    "SQLALCHEMY_DATABASE_URI"
+] = "sqlite:///database.db"  # Replace with your DB URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 @app.route("/")
@@ -38,6 +48,18 @@ def admin():
 def user():
     """Redirect to a placeholder page for the User."""
     return render_template("user.html")  # Blank page for now
+
+
+from flask import render_template
+
+
+@app.route("/statistics", methods=["GET"])
+def statistics():
+    """
+    Render the statistics page with unassigned WSE counts for each sheet.
+    """
+    stats = session.query(SheetAnalysis).all()
+    return render_template("statistics.html", stats=stats)
 
 
 # Database setup
@@ -315,6 +337,66 @@ def get_checker_list():
     valid_checkers = session.query(ProjectData.checker).distinct().all()
     checker_names = [checker[0] for checker in valid_checkers if checker[0]]
     return jsonify(checker_names)
+
+
+@app.route("/update_statistics")
+def update_statistics():
+    # Call your function to calculate statistics
+    calculate_unassigned_wse()
+    return redirect("/statistics")
+
+
+from datetime import datetime
+
+
+def calculate_unassigned_wse():
+    sheets = [
+        "ALL_JOBS_RANKED",
+        "ALL_JOBS_UNRANKED",
+        "PROJECTS_IN_PROCESS",
+        "PROJECTS_PROCESSED",
+    ]
+
+    for sheet in sheets:
+        normalized_sheet = sheet.upper()  # Normalize sheet name to uppercase
+        print(f"Processing sheet: {normalized_sheet}")
+
+        # Query total unassigned WSE Responsible entries
+        unassigned_count = (
+            session.query(SheetData)
+            .filter(
+                SheetData.sheet_name.ilike(
+                    normalized_sheet
+                ),  # Case-insensitive comparison
+                SheetData.column_name == "WSE Responsible",
+                SheetData.value == "#",
+            )
+            .count()
+        )
+
+        # Debugging: Log the count of unassigned entries
+        print(f"Unassigned count for {normalized_sheet}: {unassigned_count}")
+
+        # Update or insert statistics in the database
+        stat = (
+            session.query(SheetAnalysis)
+            .filter(SheetAnalysis.sheet_name == normalized_sheet)
+            .first()
+        )
+        if stat:
+            stat.unassigned_count = unassigned_count
+            stat.created_at = datetime.utcnow()
+        else:
+            new_stat = SheetAnalysis(
+                sheet_name=normalized_sheet,  # Ensure consistent casing
+                unassigned_count=unassigned_count,
+                created_at=datetime.utcnow(),
+            )
+            session.add(new_stat)
+
+    # Commit changes to the database
+    session.commit()
+    print("Statistics updated successfully.")
 
 
 if __name__ == "__main__":
