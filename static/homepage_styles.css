@@ -1,89 +1,78 @@
-/* Full-page background image */
+/* General styling */
 body {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
     background: url('/static/Background.jpg') no-repeat center center fixed;
     background-size: cover;
-}
-
-/* Centered container for the content */
-.container {
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    color: black; /* Change to black for better readability */
-    text-align: center;
-    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7); /* Subtle white shadow for readability */
+    min-height: 100vh;
 }
 
-/* Add a semi-transparent light blue background behind the text and buttons */
-.content-box {
-    background-color: rgba(173, 216, 230, 0.7); /* Light blue with transparency */
-    padding: 50px;
+/* Single container */
+.container {
+    background-color: #e8f5e9; /* Mild green shade */
+    padding: 40px;
     border-radius: 20px;
-    width: 60%;
+    width: 90%;
     max-width: 600px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* Heading styles */
-h1 {
-    font-size: 3rem;
+/* Heading styled to match Enercon branding */
+.enercon-heading {
+    font-size: 2.5rem;
+    font-weight: bold;
     margin-bottom: 20px;
-    color: black; /* Change text color to black */
+    color: #006847; /* Enercon green */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* Text styling */
 p {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
+    color: #333333; /* Dark gray for contrast */
     margin-bottom: 30px;
-    color: black; /* Change text color to black */
 }
 
-/* Button styles */
-.btn {
-    background-color: #ffffff; /* Pure white buttons */
-    color: #333;
+/* Button styling */
+button {
+    background-color: #007bff; /* Blue buttons */
+    color: white;
     border: none;
     padding: 15px 40px;
-    margin: 15px;
-    text-transform: uppercase;
+    margin: 10px;
     font-size: 1.2rem;
-    font-weight: bold;
     border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 6px 12px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-.btn:hover {
-    background-color: #f0f0f0; /* Slightly darker white on hover */
-    transform: scale(1.05); /* Slight zoom effect */
-    box-shadow: 0 8px 16px rgba(255, 255, 255, 0.7);
+button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    transform: scale(1.05);
 }
 
-/* Admin button with distinct green color */
+/* Admin button style */
 .btn-admin {
-    background-color: #28a745; /* Green */
+    background-color: #43a047; /* Vibrant green */
     color: #ffffff;
-    font-weight: bold;
 }
 
 .btn-admin:hover {
-    background-color: #218838; /* Darker green on hover */
-    box-shadow: 0 8px 16px rgba(0, 128, 0, 0.5); /* Subtle green shadow */
+    background-color: #2e7d32;
 }
 
-/* User button with distinct orange color */
+/* User button style */
 .btn-user {
-    background-color: #fd7e14; /* Orange */
+    background-color: #ff7043; /* Vibrant orange */
     color: #ffffff;
-    font-weight: bold;
 }
 
 .btn-user:hover {
-    background-color: #e5670d; /* Darker orange on hover */
-    box-shadow: 0 8px 16px rgba(255, 165, 0, 0.5); /* Subtle orange shadow */
+    background-color: #d84315;
 }

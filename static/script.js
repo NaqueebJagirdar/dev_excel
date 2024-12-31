@@ -32,15 +32,17 @@ async function loadSheets() {
       }
     });
 
-    // 2) Load first sheet + 3) load filters
-        await loadSheet();
-        await loadFilters();
+    // 2) Load the first sheet
+    await loadSheet();
+
+    // 5) Load the full checker list from DB so we have all names:
+    await loadCheckerList();
+
+    // 3) Now that we have checkerList, build the filters
+    await loadFilters();
 
     // 4) Initialize search
     initializeSearch();
-
-    // 5) Load the full checker list from DB so we can populate the per-row dropdown
-    await loadCheckerList();
 
     // If sheetSelector changes, re-load everything
     selector.addEventListener('change', async () => {
@@ -49,14 +51,15 @@ async function loadSheets() {
       document.getElementById('searchInput').value = '';
 
       await loadSheet();
-      await loadFilters();
       // no need to reload checkerList if it's always the same for all sheets
+      await loadFilters(); // rebuild filter dropdown
       renderTable(originalData);
     });
   } catch (error) {
     console.error('Error loading sheets:', error);
   }
 }
+
 
 /**
  * Load the data for the selected sheet from the server.
@@ -84,19 +87,36 @@ async function loadFilters() {
   const filterRow = document.getElementById('headerRow');
   filterRow.innerHTML = '';
 
+  // Gather real columns from the current sheet data
+  const realColumns = Object.keys(originalData).filter(col =>
+    col &&
+    col !== 'checker' &&
+    originalData[col]?.some(value => value !== undefined && value !== '')
+  );
+
   try {
     const resp = await fetch(`/filters/${sheetName}`);
-    const filters = await resp.json(); // { "Country": [...], "Priority": [...], etc. }
+    const filters = await resp.json(); // e.g. { "Country": [...], "Priority": [...], etc. }
 
-    // Build the filter <th>/<select> for each column
+    // Build the filter <th>/<select> for each column found in realColumns
     for (const column in filters) {
+      // Skip columns that aren't in realColumns (prevents empty columns)
+      if (!realColumns.includes(column)) {
+        continue;
+      }
+      // Also skip "checker" because we'll handle it separately
+      if (column === 'checker') {
+        continue;
+      }
+
+      // Create TH + SELECT
       const th = document.createElement('th');
       const select = document.createElement('select');
       select.id = `filter-${column}`;
       select.classList.add('filter-dropdown');
       select.innerHTML = '<option value="">-- All --</option>';
 
-      // Populate dropdown options
+      // Populate dropdown options ONCE
       filters[column].forEach(value => {
         const option = document.createElement('option');
         option.value = value;
@@ -106,37 +126,20 @@ async function loadFilters() {
 
       // Add event listener for filter changes
       select.addEventListener('change', () => handleFilterChange(column, select.value));
-      th.appendChild(select);
-      filterRow.appendChild(th);
 
-      if (column === 'checker') {
-        continue;
-      }
-
-
-
-      // Populate
-      filters[column].forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        select.appendChild(option);
-      });
-
-      // Listen for changes
+      // Append <select> to <th> and then to filterRow
       th.appendChild(select);
       filterRow.appendChild(th);
     }
 
     // Now add a dedicated filter for "checker"
-    // We'll use the globally loaded "checkerList" to build it
     const checkerTh = document.createElement('th');
     const checkerSelect = document.createElement('select');
     checkerSelect.id = 'filter-checker';
     checkerSelect.classList.add('filter-dropdown');
     checkerSelect.innerHTML = '<option value="">-- All --</option>';
 
-    // Populate with the universal checker list
+    // Populate the universal checker list
     checkerList.forEach(name => {
       const option = document.createElement('option');
       option.value = name;
@@ -144,10 +147,11 @@ async function loadFilters() {
       checkerSelect.appendChild(option);
     });
 
-    // When the user picks a checker from the filter
+    // Handle "checker" filter changes
     checkerSelect.addEventListener('change', () => {
       handleFilterChange('checker', checkerSelect.value);
     });
+
     checkerTh.appendChild(checkerSelect);
     filterRow.appendChild(checkerTh);
 
@@ -155,6 +159,8 @@ async function loadFilters() {
     console.error("Error loading filters:", err);
   }
 }
+
+
 
 /**
  * Load all valid checker names from /checker_list
@@ -294,131 +300,140 @@ function applySearch(data) {
   return searchedData;
 }
 
-function renderTable(data) {
-    const tableBody = document.getElementById('tableBody');
-    const headerRow = document.getElementById('headerTitles');
-    const filterRow = document.getElementById('headerRow');
 
-    // Clear existing table content
-    tableBody.innerHTML = '';
-    headerRow.innerHTML = '';
-    filterRow.innerHTML = '';
+async function populateCheckerDatalist() {
+    try {
+        // Fetch the checker list from the server
+        const response = await fetch('/checker_list');
+        const checkerList = await response.json();
 
-    // Handle case where no data is available
-    if (!data || Object.keys(data).length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
-        return;
+        // Check if the checker list is valid
+        if (!checkerList || !Array.isArray(checkerList) || checkerList.length === 0) {
+            console.warn('Checker list is empty or invalid.');
+            return;
+        }
+
+        // Get or create the datalist element
+        let datalist = document.getElementById('checker-options');
+        if (!datalist) {
+            datalist = document.createElement('datalist');
+            datalist.id = 'checker-options';
+            document.body.appendChild(datalist);
+        }
+
+        // Populate the datalist only if it is not already populated
+        if (datalist.childElementCount === 0) {
+            checkerList.forEach(checker => {
+                const option = document.createElement('option');
+                option.value = checker;
+                datalist.appendChild(option);
+            });
+            console.log('Datalist populated with checkers:', checkerList);
+        } else {
+            console.log('Datalist already populated. Skipping redundant updates.');
+        }
+    } catch (error) {
+        console.error('Error fetching checker list:', error);
     }
-
-    // Dynamically get columns excluding "checker" and filtering out empty or undefined keys
-    const columns = Object.keys(data).filter(col => {
-        return col && col !== 'checker' && data[col]?.some(value => value !== undefined && value !== '');
-    });
-
-    console.log("Filtered columns:", columns);
-
-    // Create column headers dynamically
-    columns.forEach(col => {
-        // Header titles
-        const th = document.createElement('th');
-        th.setAttribute('data-column', col);
-        th.textContent = col;
-        headerRow.appendChild(th);
-
-        // Filter dropdowns
-        const thFilter = document.createElement('th');
-        const select = document.createElement('select');
-        select.id = `filter-${col}`;
-        select.classList.add('filter-dropdown');
-        select.innerHTML = '<option value="">-- All --</option>'; // Default "All" option
-
-        // Populate dropdown with unique values
-        const uniqueValues = [...new Set(data[col].filter(value => value !== undefined && value !== ''))];
-        uniqueValues.forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            select.appendChild(option);
-        });
-
-        select.addEventListener('change', () => handleFilterChange(col, select.value));
-        thFilter.appendChild(select);
-        filterRow.appendChild(thFilter);
-    });
-
-    // Add "Checker" and "Actions" headers
-    const checkerHeader = document.createElement('th');
-    checkerHeader.textContent = "Checker";
-    headerRow.appendChild(checkerHeader);
-
-    const actionsHeader = document.createElement('th');
-    actionsHeader.textContent = "Actions";
-    headerRow.appendChild(actionsHeader);
-
-    // Ensure "checker-options" datalist exists
-    let datalist = document.getElementById('checker-options');
-    if (!datalist) {
-        datalist = document.createElement('datalist');
-        datalist.id = 'checker-options';
-
-        // Populate datalist with checker options
-        checkerList.forEach(checker => {
-            const option = document.createElement('option');
-            option.value = checker;
-            datalist.appendChild(option);
-        });
-
-        document.body.appendChild(datalist); // Append to the DOM
-    }
-
-    // Render data rows dynamically
-    const rowCount = data[columns[0]]?.length || 0;
-    for (let i = 0; i < rowCount; i++) {
-        const row = document.createElement('tr');
-
-        // Add data cells dynamically
-        columns.forEach(col => {
-            const td = document.createElement('td');
-            td.textContent = data[col][i] || ''; // Empty values as empty string
-            row.appendChild(td);
-        });
-
-        // Add "Checker" input field
-        const checkerCell = document.createElement('td');
-        const currentChecker = data.checker ? data.checker[i] || "Not Assigned" : "Not Assigned";
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = currentChecker;
-        input.classList.add('checker-input'); // Optional styling
-        input.setAttribute('list', 'checker-options');
-
-        input.addEventListener('click', event => event.stopPropagation());
-        input.addEventListener('blur', () => saveChecker(data.ID[i], input.value.trim()));
-        input.addEventListener('keydown', event => {
-            if (event.key === 'Enter') input.blur();
-        });
-
-        checkerCell.appendChild(input);
-        row.appendChild(checkerCell);
-
-        // Add "Actions" button
-        const actionsCell = document.createElement('td');
-        const viewButton = document.createElement('button');
-        viewButton.textContent = "View Project";
-        viewButton.classList.add('view-project-button'); // Optional styling
-        viewButton.addEventListener('click', () => {
-            window.location.href = `/project/${data.ID[i]}`;
-        });
-
-        actionsCell.appendChild(viewButton);
-        row.appendChild(actionsCell);
-
-        tableBody.appendChild(row);
-    }
-
-    console.log(`Rendered table with ${rowCount} rows and ${columns.length} columns.`);
 }
+
+// Call this function when the page loads
+document.addEventListener('DOMContentLoaded', populateCheckerDatalist);
+
+function renderTable(data) {
+  const tableBody = document.getElementById('tableBody');
+  const headerTitles = document.getElementById('headerTitles');
+
+  // 1) Clear existing table rows & column headers,
+  //    but DO NOT touch the filter row (#headerRow).
+  tableBody.innerHTML = '';
+  headerTitles.innerHTML = '';
+
+  // 2) Handle no data
+  if (!data || Object.keys(data).length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="100%">No data available</td></tr>';
+    return;
+  }
+
+  // 3) Figure out which columns to show (besides "checker").
+  const columns = Object.keys(data).filter(col => {
+    return col && col !== 'checker' && data[col]?.some(value => value !== undefined && value !== '');
+  });
+
+  console.log("Filtered columns:", columns);
+
+  // 4) Create column headings for each data column
+  columns.forEach(col => {
+    const th = document.createElement('th');
+    th.setAttribute('data-column', col);
+    th.textContent = col; // e.g. "COUNTRY", "DEADLINE", etc.
+    headerTitles.appendChild(th);
+  });
+
+  // 5) Add column heading for "Checker"
+  const checkerHeader = document.createElement('th');
+  checkerHeader.textContent = "Checker";
+  headerTitles.appendChild(checkerHeader);
+
+  // 6) Add column heading for "Actions"
+  const actionsHeader = document.createElement('th');
+  actionsHeader.textContent = "Actions";
+  headerTitles.appendChild(actionsHeader);
+
+  // 7) Render data rows
+  const rowCount = data[columns[0]]?.length || 0;
+  for (let i = 0; i < rowCount; i++) {
+    const row = document.createElement('tr');
+
+    // For each data column, create a <td> with the cell value
+    columns.forEach(col => {
+      const td = document.createElement('td');
+      td.textContent = data[col][i] || ''; // show empty string if undefined
+      row.appendChild(td);
+    });
+
+    // Checker cell
+    const checkerCell = document.createElement('td');
+    const currentChecker = data.checker ? data.checker[i] || "Not Assigned" : "Not Assigned";
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentChecker;
+    input.classList.add('checker-input'); // Optional styling
+    input.setAttribute('list', 'checker-options'); // link to our datalist
+
+    // Prevent row click events from interfering
+    input.addEventListener('click', event => event.stopPropagation());
+
+    // Save checker on blur or Enter
+    input.addEventListener('blur', () => {
+      saveChecker(data.ID[i], input.value.trim());
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') input.blur();
+    });
+
+    checkerCell.appendChild(input);
+    row.appendChild(checkerCell);
+
+    // Actions cell
+    const actionsCell = document.createElement('td');
+    const viewButton = document.createElement('button');
+    viewButton.textContent = "View Project";
+    viewButton.classList.add('view-project-button'); // styling
+    viewButton.addEventListener('click', () => {
+      window.location.href = `/project/${data.ID[i]}`;
+    });
+
+    actionsCell.appendChild(viewButton);
+    row.appendChild(actionsCell);
+
+    tableBody.appendChild(row);
+  }
+
+  console.log(`Rendered table with ${rowCount} rows and ${columns.length} columns.`);
+}
+
 
 
 
@@ -444,36 +459,6 @@ async function saveChecker(projectId, newChecker) {
     }
 }
 
-async function populateCheckerDatalist() {
-    try {
-        // Fetch the checker list from the server
-        const response = await fetch('/checker_list');
-        const checkerList = await response.json();
-
-        // Get the datalist element
-        let datalist = document.getElementById('checker-options');
-        if (!datalist) {
-            datalist = document.createElement('datalist');
-            datalist.id = 'checker-options';
-            document.body.appendChild(datalist);
-        }
-
-        // Clear existing options in the datalist
-        datalist.innerHTML = '';
-
-        // Populate the datalist with checker names
-        checkerList.forEach(checker => {
-            const option = document.createElement('option');
-            option.value = checker;
-            datalist.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error fetching checker list:', error);
-    }
-}
-
-// Call this function when the page loads
-document.addEventListener('DOMContentLoaded', populateCheckerDatalist);
 
 /* -----------------------------------------------------
    Create a Checker Dropdown for a specific project row
@@ -483,10 +468,7 @@ function createCheckerDropdown(projectId, selectedChecker) {
 
     // Use the global 'checkerList' we loaded from the server
     // e.g. ["Abhilash Nayak", "Ahmet Kocaturk", ...]
-    if (!checkerList || checkerList.length === 0) {
-        // Fallback if checkerList is empty or undefined
-        checkerList = ["Abhilash Nayak", "Ahmet Kocaturk","Naqueeb", "Uta Zwoelfer-Dorau", "Varun C", "Abhin A"];
-    }
+
 
     // Add a blank option to allow removing the checker
     const blankOption = document.createElement('option');
@@ -619,6 +601,64 @@ function initializeSearch() {
     applyFilters();
   });
 }
+/**
+ * Add a button to assign default checkers to unassigned rows
+ */
+/**
+ * Add an Assign Checkers button to the page
+ */
+/**
+ * Add Assign Random Checkers Button
+ */
+function addAssignRandomCheckersButton() {
+    const assignButton = document.getElementById("assignCheckersButton");
+    if (assignButton) {
+        assignButton.style.display = "inline-block"; // Make the button visible
+        assignButton.onclick = assignRandomCheckers; // Attach the click event
+    }
+}
+
+/**
+ * Assign random checkers to all rows where no checker is assigned
+ */
+async function assignRandomCheckers() {
+    const rows = document.querySelectorAll("#tableBody tr");
+
+    for (const row of rows) {
+        const checkerInput = row.querySelector(".checker-input");
+        const projectId = row.dataset.projectId;
+
+        if (!checkerInput.value || checkerInput.value === "Not Assigned") {
+            const randomChecker = checkerList[Math.floor(Math.random() * checkerList.length)];
+            checkerInput.value = randomChecker;
+
+            // Link to datalist explicitly
+            checkerInput.setAttribute('list', 'checker-options');
+
+            try {
+                const response = await fetch(`/update_checker/${projectId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ checker: randomChecker }),
+                });
+
+                if (!response.ok) {
+                    console.error(`Failed to update checker for project ${projectId}`);
+                } else {
+                    console.log(`Checker assigned to project ${projectId}: ${randomChecker}`);
+                }
+            } catch (error) {
+                console.error(`Error updating checker for project ${projectId}:`, error);
+            }
+        }
+    }
+}
+
+
+// Add the button after DOM content is loaded
+document.addEventListener("DOMContentLoaded", () => {
+    addAssignRandomCheckersButton();
+});
 
 /* -----------------------------------------------------
    Page startup

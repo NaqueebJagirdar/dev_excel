@@ -293,6 +293,9 @@ def update_checker(project_id):
     data = request.json
     checker = data.get("checker", "")  # Default to an empty string if not provided
 
+    if not checker:
+        checker = None
+
     # Log the incoming request
     print(f"Incoming request: project_id={project_id}, checker={checker or '(none)'}")
 
